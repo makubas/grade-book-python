@@ -1,6 +1,4 @@
 from sqlite3 import connect
-from typing import List, Any
-
 import config
 
 
@@ -10,7 +8,7 @@ class DbManager:
         self.conn = connect(self.db_name)
         self.cursor = self.conn.cursor()
 
-    def run_query(self, query: str, expected_return: bool = False) -> 'None or List':
+    def run_query(self, query: str, expected_return: bool = False):
         if expected_return:
             print(f"SQL QUERY: {query}")
             return self.cursor.execute(query).fetchall()
@@ -18,6 +16,14 @@ class DbManager:
             print(f"SQL QUERY: {query}")
             self.cursor.execute(query)
             self.conn.commit()
+
+    def erase_table_data(self, *tables: str):
+        for table in tables:
+            self.run_query(f"delete from {table}")
+            self.run_query(f"delete from sqlite_sequence where name = '{table}'")
+
+    def erase_all_data(self):
+        self.erase_table_data("classes", "grades", "parents", "students", "teachers")
 
 
 db_manager = DbManager()

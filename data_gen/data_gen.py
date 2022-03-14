@@ -88,11 +88,14 @@ class ClassData(TableData):
             class_profile_2 = class_profiles.pop(randint(0, len(class_profiles) - 1))
             class_name = f"{randint(1, 8)} {class_profile_1}-{class_profile_2}"
             if with_existing_teachers:
-                available_ids = db_manager.run_query(f"select teacher_id from teachers where teacher_id not in (select teacher_id from classes)", expected_return=True)
+                available_ids = db_manager.run_query(
+                    f"select teacher_id from teachers where teacher_id not in (select teacher_id from classes)",
+                    expected_return=True)
                 teacher_id = available_ids[0][0]
             else:
                 TeachersData.generate(1)
-                teacher_id = db_manager.run_query(f"select teacher_id from teachers order by teacher_id desc limit 1", expected_return=True)[0][0]
+                teacher_id = db_manager.run_query(f"select teacher_id from teachers order by teacher_id desc limit 1",
+                                                  expected_return=True)[0][0]
             ClassData.insert(class_name, teacher_id)
 
     @staticmethod
@@ -109,25 +112,35 @@ class StudentsData(TableData):
     @staticmethod
     def generate(rows_amount: int, with_existing_parents: bool = False, with_existing_classes: bool = False) -> None:
         if with_existing_parents:
-            max_rows_amount = int(db_manager.run_query(f"select count(parents_id) from parents where parents_id not in (select parents_id from students)", expected_return=True)[0][0])
+            max_rows_amount = int(db_manager.run_query(
+                f"select count(parents_id) from parents where parents_id not in (select parents_id from students)",
+                expected_return=True)[0][0])
             rows_amount = min(rows_amount, max_rows_amount)
         if with_existing_classes:
-            max_rows_amount = int(db_manager.run_query(f"select count(class_id) from classes where class_id not in (select class_id from students group by class_id having count(class_id) >= 30 order by count(class_id))", expected_return=True)[0][0])
+            max_rows_amount = int(db_manager.run_query(
+                f"select count(class_id) from classes where class_id not in (select class_id from students group by class_id having count(class_id) >= 30 order by count(class_id))",
+                expected_return=True)[0][0])
             rows_amount = min(rows_amount, max_rows_amount)
 
         for _ in range(rows_amount):
             student = Identity()
             if with_existing_parents:
-                parents_id = int(db_manager.run_query(f"select parents_id from parents where parents_id not in (select parents_id from students) limit 1", expected_return=True)[0][0])
+                parents_id = int(db_manager.run_query(
+                    f"select parents_id from parents where parents_id not in (select parents_id from students) limit 1",
+                    expected_return=True)[0][0])
             else:
                 ParentsData.generate(1)
-                parents_id = db_manager.run_query(f"select parents_id from parents order by parents_id desc limit 1", expected_return=True)[0][0]
+                parents_id = db_manager.run_query(f"select parents_id from parents order by parents_id desc limit 1",
+                                                  expected_return=True)[0][0]
 
             if with_existing_classes:
-                class_id = db_manager.run_query(f"select class_id from classes where class_id not in (select class_id from students group by class_id having count(class_id) >= 30) order by class_id desc limit 1", expected_return=True)[0][0]
+                class_id = db_manager.run_query(
+                    f"select class_id from classes where class_id not in (select class_id from students group by class_id having count(class_id) >= 30) order by class_id desc limit 1",
+                    expected_return=True)[0][0]
             else:
                 ClassData.generate(1)
-                class_id = db_manager.run_query(f"select class_id from classes order by class_id desc limit 1", expected_return=True)[0][0]
+                class_id = db_manager.run_query(f"select class_id from classes order by class_id desc limit 1",
+                                                expected_return=True)[0][0]
 
             StudentsData.insert(student.first_name, student.last_name, student.email, class_id, parents_id)
 
@@ -139,6 +152,44 @@ class StudentsData(TableData):
     def insert(first_name: str, last_name: str, student_email: str, class_id: int, parents_id: int) -> None:
         db_manager.run_query(f"insert into students values " +
                              f"(null, '{first_name}', '{last_name}', '{student_email}', '{class_id}', '{parents_id}')")
+
+
+class GradesData(TableData):
+    lesson_names_org = ["mat", "fiz", "inf", "biol", "chem", "pol", "hist", "geo"]
+
+    @staticmethod
+    def generate(rows_amount: int, with_existing_students: bool = False) -> None:
+        lesson_names = GradesData.lesson_names_org[:]
+
+        if with_existing_students:
+            max_rows_amount = int(db_manager.run_query(
+                f"select count(student_id) from students",
+                expected_return=True)[0][0])
+            rows_amount = min(rows_amount, max_rows_amount)
+
+        for _ in range(rows_amount):
+            if with_existing_students:
+                student_id = int(db_manager.run_query(
+                    f"select student_id from students limit 1",
+                    expected_return=True)[0][0])
+            else:
+                StudentsData.generate(1)
+                student_id = db_manager.run_query(f"select student_id from students order by student_id desc limit 1",
+                                                  expected_return=True)[0][0]
+
+            value = randint(1, 6)
+            weight = randint(1, 3)
+            lesson_name = lesson_names[randint(0, len(lesson_names) - 1)]
+            GradesData.insert(student_id, lesson_name, value, weight)
+
+    @staticmethod
+    def table_name() -> str:
+        return "grades"
+
+    @staticmethod
+    def insert(student_id: id, lesson_name: str, value: int, weight: int) -> None:
+        db_manager.run_query(f"insert into grades values " +
+                             f"(null, '{student_id}', '{lesson_name}', '{value}', '{weight}')")
 
 
 class Identity:
@@ -177,6 +228,7 @@ ParentsData.clear()
 TeachersData.clear()
 ClassData.clear()
 StudentsData.clear()
+GradesData.clear()
 
 ParentsData.generate(100)
 TeachersData.generate(50)
@@ -189,3 +241,5 @@ StudentsData.generate(5, with_existing_parents=True)
 StudentsData.generate(5, with_existing_classes=True)
 StudentsData.generate(5, with_existing_parents=True, with_existing_classes=True)
 
+GradesData.generate(30)
+GradesData.generate(50, with_existing_students=True)
