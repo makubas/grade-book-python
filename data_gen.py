@@ -1,3 +1,4 @@
+import os
 from os import chdir
 from random import randint
 from abc import ABC, abstractmethod
@@ -200,7 +201,11 @@ class Identity:
             self.gender = "female"
         else:
             self.gender = gender
-        chdir(config.DATA_GEN_FILES_PATH)
+
+        try:
+            chdir(config.DATA_GEN_FILES_PATH)
+        except FileNotFoundError:
+            chdir(config.DATA_GEN_FILES_PATH_LINUX)
 
         if last_name is None:
             with open("last_names.txt", encoding="utf8") as last_names:
@@ -220,26 +225,28 @@ class Identity:
 
         self.email = f"{self.first_name}.{self.last_name}{randint(0, 999)}@{chr(randint(ord('a'), ord('z')))}_mail.com".lower()
 
-    def __str__(self):
-        return f"{self.first_name} {self.last_name}, {self.email}"
+
+def gen_all():
+    ParentsData.clear()
+    TeachersData.clear()
+    ClassData.clear()
+    StudentsData.clear()
+    GradesData.clear()
+
+    ParentsData.generate(100)
+    TeachersData.generate(50)
+
+    ClassData.generate(30)
+    ClassData.generate(5, with_existing_teachers=True)
+
+    StudentsData.generate(10)
+    StudentsData.generate(5, with_existing_parents=True)
+    StudentsData.generate(5, with_existing_classes=True)
+    StudentsData.generate(5, with_existing_parents=True, with_existing_classes=True)
+
+    GradesData.generate(30)
+    GradesData.generate(50, with_existing_students=True)
 
 
-ParentsData.clear()
-TeachersData.clear()
-ClassData.clear()
-StudentsData.clear()
-GradesData.clear()
 
-ParentsData.generate(100)
-TeachersData.generate(50)
 
-ClassData.generate(30)
-ClassData.generate(5, with_existing_teachers=True)
-
-StudentsData.generate(10)
-StudentsData.generate(5, with_existing_parents=True)
-StudentsData.generate(5, with_existing_classes=True)
-StudentsData.generate(5, with_existing_parents=True, with_existing_classes=True)
-
-GradesData.generate(30)
-GradesData.generate(50, with_existing_students=True)

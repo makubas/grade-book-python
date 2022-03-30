@@ -9,13 +9,15 @@ class DbManager:
         self.cursor = self.conn.cursor()
 
     def run_query(self, query: str, expected_return: bool = False):
+        if ';' in query:  # catching sql injection
+            raise ValueError("Can't use ';'")
         if expected_return:
             print(f"SQL QUERY: {query}")
             return self.cursor.execute(query).fetchall()
         else:
             print(f"SQL QUERY: {query}")
             self.cursor.execute(query)
-            self.conn.commit()
+        self.conn.commit()
 
     def erase_table_data(self, *tables: str):
         for table in tables:
