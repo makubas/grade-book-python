@@ -75,7 +75,8 @@ class TeachersData(TableData):
 
 
 class ClassData(TableData):
-    class_profiles_org = ["mat", "fiz", "inf", "biol", "chem", "pol", "hist", "geo"]
+    class_profiles_org = list(config.SUBJECTS.keys())
+    #class_profiles_org = ["mat", "fiz", "inf", "biol", "chem", "pol", "hist", "geo"]
 
     @staticmethod
     def generate(rows_amount: int, with_existing_teachers: bool = False) -> None:
@@ -117,11 +118,6 @@ class StudentsData(TableData):
                 f"select count(parents_id) from parents where parents_id not in (select parents_id from students)",
                 expected_return=True)[0][0])
             rows_amount = min(rows_amount, max_rows_amount)
-        if with_existing_classes:
-            max_rows_amount = int(db_manager.run_query(
-                f"select count(class_id) from classes where class_id not in (select class_id from students group by class_id having count(class_id) >= 30 order by count(class_id))",
-                expected_return=True)[0][0])
-            rows_amount = min(rows_amount, max_rows_amount)
 
         for _ in range(rows_amount):
             student = Identity()
@@ -135,9 +131,13 @@ class StudentsData(TableData):
                                                   expected_return=True)[0][0]
 
             if with_existing_classes:
+                class_amount = int(db_manager.run_query(
+                    f"select count(class_id) from classes where class_id not in (select class_id from students group by class_id having count(class_id) >= 30 order by count(class_id))",
+                    expected_return=True)[0][0])
+
                 class_id = db_manager.run_query(
-                    f"select class_id from classes where class_id not in (select class_id from students group by class_id having count(class_id) >= 30) order by class_id desc limit 1",
-                    expected_return=True)[0][0]
+                    f"select class_id from classes where class_id not in (select class_id from students group by class_id having count(class_id) >= 30) order by class_id",
+                    expected_return=True)[randint(0, class_amount - 1)][0]
             else:
                 ClassData.generate(1)
                 class_id = db_manager.run_query(f"select class_id from classes order by class_id desc limit 1",
@@ -156,27 +156,24 @@ class StudentsData(TableData):
 
 
 class GradesData(TableData):
-    lesson_names_org = ["mat", "fiz", "inf", "biol", "chem", "pol", "hist", "geo"]
+    lesson_names_org = list(config.SUBJECTS.keys())
 
     @staticmethod
     def generate(rows_amount: int, with_existing_students: bool = False) -> None:
         lesson_names = GradesData.lesson_names_org[:]
-
-        if with_existing_students:
-            max_rows_amount = int(db_manager.run_query(
-                f"select count(student_id) from students",
-                expected_return=True)[0][0])
-            rows_amount = min(rows_amount, max_rows_amount)
-
+        print(lesson_names)
         for _ in range(rows_amount):
             if with_existing_students:
-                student_id = int(db_manager.run_query(
-                    f"select student_id from students limit 1",
+                students_amount = int(db_manager.run_query(
+                    f"select count(student_id) from students",
                     expected_return=True)[0][0])
+
+                student_id = int(db_manager.run_query(
+                    f"select student_id from students",
+                    expected_return=True)[randint(0, students_amount - 1)][0])
             else:
                 StudentsData.generate(1)
-                student_id = db_manager.run_query(f"select student_id from students order by student_id desc limit 1",
-                                                  expected_return=True)[0][0]
+                student_id = db_manager.run_query(f"select student_id from students order by student_id desc limit 1", expected_return=True)[0][0]
 
             value = randint(1, 6)
             weight = randint(1, 3)
@@ -225,7 +222,7 @@ class Identity:
 
         self.email = f"{self.first_name}.{self.last_name}{randint(0, 999)}@{chr(randint(ord('a'), ord('z')))}_mail.com".lower()
 
-
+'''
 def gen_all():
     ParentsData.clear()
     TeachersData.clear()
@@ -246,7 +243,17 @@ def gen_all():
 
     GradesData.generate(30)
     GradesData.generate(50, with_existing_students=True)
+'''
 
+def gen_all_new():
+    ParentsData.clear()
+    TeachersData.clear()
+    ClassData.clear()
+    StudentsData.clear()
+    GradesData.clear()
 
+    ClassData.generate(10)
+    StudentsData.generate(200, with_existing_classes=True)
+    GradesData.generate(1300, with_existing_students=True)
 
-
+#gen_all_new()
