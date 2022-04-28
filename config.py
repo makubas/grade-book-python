@@ -16,7 +16,7 @@ SUBJECTS = {
 }
 AUTOLOGIN = True
 AUTOLOGIN_DATA = {
-    "first_name": "Tadeusz",
-    "last_name": "Walczak",
-    "email": "tadeusz.walczak685@l_mail.com"
+    "first_name": "Artur",
+    "last_name": "Jaworski",
+    "email": "artur.jaworski655@h_mail.com"
 }

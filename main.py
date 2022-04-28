@@ -2,6 +2,8 @@ from data_gen import *
 import config
 import tkinter as tk
 from tkinter import ttk
+import pprint
+
 
 class MainApp(tk.Frame):
     def __init__(self, parent, *args, **kwargs):
@@ -32,16 +34,16 @@ class MainApp(tk.Frame):
                 self.classes_list.append(class_name[0] + "   [YOUR CLASS]")
             else:
                 self.classes_list.append(class_name[0])
-
         self.classes_list.sort(key=lambda class_nm: class_nm[0])
-        self.selected_class_cb = ttk.Combobox(self.filters_frame, textvariable=self.selected_class_var, state="readonly", values=self.classes_list)
+
+        self.selected_class_cb = ttk.Combobox(self.filters_frame, width=25, textvariable=self.selected_class_var, state="readonly", values=self.classes_list)
         self.selected_class_cb.pack(side="left", **padxy)
 
         # Subjects
         ttk.Label(self.filters_frame, text="Subjects:").pack(side="left", **padxy)
 
-        self.subject_cb_var = tk.StringVar(value="All")
-        self.subject_cb = ttk.Combobox(self.filters_frame, textvariable=self.subject_cb_var, state="readonly", values=["All", "Only selected"])
+        self.subject_cb_var = tk.StringVar(value="Only selected")
+        self.subject_cb = ttk.Combobox(self.filters_frame, width=15, textvariable=self.subject_cb_var, state="readonly", values=["All", "Only selected"])
         self.subject_cb.bind("<<ComboboxSelected>>", self.subject_cb_update)
         self.subject_cb.pack(side="left", **padxy)
 
@@ -57,51 +59,95 @@ class MainApp(tk.Frame):
         # Treeview
         self.treeview = StudentsTreeview(self.treeview_frame)
         self.treeview.pack(fill="both", expand=True, **padxy)
-        self.treeview.get_data_about_class(self.selected_class_var)
 
     def filter(self):
-        pass
+        self.treeview.reload()
 
     def subject_cb_update(self, event):
         is_all = (self.subject_cb_var.get() == "All")
         for comobox in self.subject_chbtns.values():
             comobox.subject_cb_var.set(is_all)
 
+    def subjects_to_show(self):
+        subjects = []
+        for subject_id, subject_chbtn in self.subject_chbtns.items():
+            if subject_chbtn.is_selected():
+                subjects.append(subject_id)
+        return subjects
+
 
 class SubjectCheckbutton(ttk.Checkbutton):
     def __init__(self, parent, shown_text):
         self.subject_cb_var = tk.BooleanVar(value=False)
-        ttk.Checkbutton.__init__(self, parent, text=shown_text, variable=self.subject_cb_var, onvalue=True, offvalue=False, command=self.on_click)
+        ttk.Checkbutton.__init__(self, parent, text=shown_text, variable=self.subject_cb_var, onvalue=True, offvalue=False)
 
-    def on_click(self):
-        pass
-
-    def selected(self):
+    def is_selected(self):
         return self.subject_cb_var.get()
 
 
 class StudentsTreeview(ttk.Treeview):
     columns = {
-        "id": "Id",
-        "last_name": "Last name",
-        "first_name": "First name"
+        **{
+            "id": "Id",
+            "last_name": "Last name",
+            "first_name": "First name"
+        },
+        **config.SUBJECTS
     }
 
     def __init__(self, parent, *args, **kwargs):
         ttk.Treeview.__init__(self, parent, *args, show="headings", columns=list(self.columns.keys()), **kwargs)
+        print(self.columns)
+        self.data = {}
         for column, heading in self.columns.items():
-            self.add_column(column, heading)
+            self.heading(column, text=heading)
         self.column("id", width=40)
         self.column("last_name", width=100)
         self.column("first_name", width=100)
 
-    def add_column(self, column, heading):
-        self.heading(column, text=heading)
+    def reload(self):
+        query = f"select student_id, last_name, first_name from students where class_id in (select class_id from classes where class_name = '{main_app.selected_class_var.get()}') order by last_name "
+        class_data = db_manager.run_query(query, expected_return=True)
+        for row in class_data:
+            student_id = row[0]
+            grades = {}
 
-    def get_data_about_class(self, class_name):
-        query = f"select * from students where class_id in (select class_id from classes where class_name='{class_name}')"
-        data = db_manager.run_query(query, expected_return=True)
-        print(data)
+            for subject in config.SUBJECTS.keys():
+                grades[subject] = []
+            for grade in db_manager.run_query(f"select lesson_name, value, weight from grades where student_id = '{student_id}'", expected_return=True):
+                grades[grade[0]].append(grade[1])
+
+            '''
+            for subject in config.SUBJECTS.keys():
+                grades[subject] = []
+            for grade in db_manager.run_query(f"select lesson_name, value, weight from grades where student_id = '{student_id}'", expected_return=True):
+                grades[grade[0]].append({
+                    "value": grade[1],
+                    "weight": grade[2]
+                })
+            '''
+
+            self.data[student_id] = grades
+            self.data[student_id]["info"] = {
+                "last_name": row[1],
+                "first_name": row[2]
+            }
+
+        pp.pprint(self.data)
+
+        display_columns = list(self["columns"])
+        for column in self.columns.keys():
+            if column not in main_app.subjects_to_show() and column not in ["id", "last_name", "first_name"]:
+                display_columns.remove(column)
+                pass
+        self["displaycolumns"] = display_columns
+
+        self.delete(*self.get_children())
+        for student_id, student_data in self.data.items():
+            insert_data = [student_id, student_data["info"]["last_name"], student_data["info"]["first_name"]]
+            for subj_id in config.SUBJECTS.keys():
+                insert_data.append(student_data[subj_id])
+            self.insert(parent="", index="end", text=student_data["info"]["last_name"]+student_data["info"]["first_name"], values=insert_data)
 
 
 class LoginApp(tk.Frame):
@@ -156,9 +202,9 @@ def open_main_app():
 
 root = tk.Tk()
 
+pp = pprint.PrettyPrinter(depth=5)
 style = ttk.Style()
 style.configure("LoginApp.TFrame")
-
 padxy = {
     "padx": 5,
     "pady": 5

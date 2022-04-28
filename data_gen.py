@@ -132,12 +132,10 @@ class StudentsData(TableData):
 
             if with_existing_classes:
                 class_amount = int(db_manager.run_query(
-                    f"select count(class_id) from classes where class_id not in (select class_id from students group by class_id having count(class_id) >= 30 order by count(class_id))",
-                    expected_return=True)[0][0])
+                    f"select count(class_id) from classes", expected_return=True)[0][0])
 
                 class_id = db_manager.run_query(
-                    f"select class_id from classes where class_id not in (select class_id from students group by class_id having count(class_id) >= 30) order by class_id",
-                    expected_return=True)[randint(0, class_amount - 1)][0]
+                    f"select class_id from classes order by class_id", expected_return=True)[randint(0, class_amount - 1)][0]
             else:
                 ClassData.generate(1)
                 class_id = db_manager.run_query(f"select class_id from classes order by class_id desc limit 1",
@@ -161,7 +159,6 @@ class GradesData(TableData):
     @staticmethod
     def generate(rows_amount: int, with_existing_students: bool = False) -> None:
         lesson_names = GradesData.lesson_names_org[:]
-        print(lesson_names)
         for _ in range(rows_amount):
             if with_existing_students:
                 students_amount = int(db_manager.run_query(
@@ -254,6 +251,6 @@ def gen_all_new():
 
     ClassData.generate(10)
     StudentsData.generate(200, with_existing_classes=True)
-    GradesData.generate(1300, with_existing_students=True)
+    GradesData.generate(10000, with_existing_students=True)
 
 #gen_all_new()
