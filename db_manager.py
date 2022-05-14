@@ -8,7 +8,7 @@ class DbManager:
         self.conn = connect(self.db_name)
         self.cursor = self.conn.cursor()
 
-    def run_query(self, query: str, expected_return: bool = False):
+    def run_query(self, query, expected_return=False):
         if ';' in query:  # catching sql injection
             raise ValueError("Can't use ';'")
         if expected_return:
@@ -19,7 +19,7 @@ class DbManager:
             self.cursor.execute(query)
         self.conn.commit()
 
-    def erase_table_data(self, *tables: str):
+    def erase_table_data(self, *tables):
         for table in tables:
             self.run_query(f"delete from {table}")
             self.run_query(f"delete from sqlite_sequence where name = '{table}'")

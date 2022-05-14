@@ -3,7 +3,6 @@ import config
 import tkinter as tk
 from tkinter import ttk
 from tkinter import messagebox
-import pprint
 
 
 class MainApp(tk.Frame):
@@ -95,7 +94,7 @@ class MainApp(tk.Frame):
         self.treeview.pack(fill="both", expand=True, **padxy)
         self.treeview.reload()
 
-    def subject_cb_update(self, event):
+    def subject_cb_update(self):
         is_all = (self.subject_cb_var.get() == "All")
         for comobox in self.subject_chbtns.values():
             comobox.subject_cb_var.set(is_all)
@@ -181,7 +180,7 @@ class StudentsTreeview(ttk.Treeview):
             self.insert(parent="", index="end",
                         text=student_data["info"]["last_name"] + student_data["info"]["first_name"], values=insert_data)
 
-    def show_student_info(self, event):
+    def show_student_info(self):
         data = self.item(self.selection()[0])["values"]
         parents = db_manager.run_query(f"select * from parents where parents_id=(select parents_id from students where student_id={data[0]})", expected_return=True)[0]
         print(parents)

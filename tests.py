@@ -1,9 +1,6 @@
-from db_manager import db_manager
 from data_gen import *
 
 db_manager.erase_all_data()
-#  gen_all()
-
 
 ''' Odczyt wszystkich nauczycieli z imieniem Anna
 query = db_manager.run_query("select * from teachers where first_name = 'Anna'", expected_return=True)

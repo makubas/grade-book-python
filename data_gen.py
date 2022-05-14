@@ -110,7 +110,7 @@ class ClassData(TableData):
 
 class StudentsData(TableData):
     @staticmethod
-    def generate(rows_amount, with_existing_parents = False, with_existing_classes = False):
+    def generate(rows_amount, with_existing_parents=False, with_existing_classes=False):
         if with_existing_parents:
             max_rows_amount = int(db_manager.run_query(
                 f"select count(parents_id) from parents where parents_id not in (select parents_id from students)",
@@ -228,4 +228,4 @@ def gen_all():
     StudentsData.generate(200, with_existing_classes=True)
     GradesData.generate(10000, with_existing_students=True)
 
-#gen_all_new()
+# gen_all()
