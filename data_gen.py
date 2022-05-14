@@ -1,4 +1,3 @@
-import os
 from os import chdir
 from random import randint
 from abc import ABC, abstractmethod
@@ -9,21 +8,21 @@ import config
 class TableData(ABC):
     @staticmethod
     @abstractmethod
-    def generate(rows_amount: int) -> None:
+    def generate(rows_amount):
         pass  # generates random data
 
     @staticmethod
     @abstractmethod
-    def table_name() -> str:
+    def table_name():
         pass  # returns name of table
 
     @staticmethod
     @abstractmethod
-    def insert(*args) -> None:
+    def insert(*args):
         pass  # insert data to table
 
     @classmethod
-    def get_columns(cls) -> tuple:
+    def get_columns(cls):
         tables = []
         for column_data in db_manager.run_query(f"pragma table_info({cls.table_name()})", expected_return=True):
             tables.append(list(column_data)[1])
@@ -31,32 +30,32 @@ class TableData(ABC):
         return tuple(tables)
 
     @classmethod
-    def clear(cls) -> None:
+    def clear(cls):
         db_manager.run_query(f"delete from {cls.table_name()}")
         db_manager.run_query(f"delete from sqlite_sequence where name = '{cls.table_name()}'")
 
 
 class ParentsData(TableData):
     @staticmethod
-    def generate(rows_amount: int) -> None:
+    def generate(rows_amount):
         for _ in range(rows_amount):
             father = Identity(gender="male")
             mother = Identity(gender="female", last_name=father.last_name)
             ParentsData.insert(father.first_name, father.email, mother.first_name, mother.email)
 
     @staticmethod
-    def table_name() -> str:
+    def table_name():
         return "parents"
 
     @staticmethod
-    def insert(father_name: str, father_email: str, mother_name: str, mother_email: str) -> None:
+    def insert(father_name, father_email, mother_name, mother_email):
         db_manager.run_query(f"insert into parents values " +
                              f"(null, '{father_name}', '{father_email}', '{mother_name}', '{mother_email}')")
 
 
 class TeachersData(TableData):
     @staticmethod
-    def generate(rows_amount: int) -> None:
+    def generate(rows_amount):
         for _ in range(rows_amount):
             if randint(0, 1):
                 teacher = Identity("male")
@@ -65,21 +64,20 @@ class TeachersData(TableData):
             TeachersData.insert(teacher.first_name, teacher.last_name, teacher.email)
 
     @staticmethod
-    def table_name() -> str:
+    def table_name():
         return "teachers"
 
     @staticmethod
-    def insert(first_name: str, last_name: str, teacher_email: str) -> None:
+    def insert(first_name, last_name, teacher_email):
         db_manager.run_query(f"insert into teachers values " +
                              f"(null, '{first_name}', '{last_name}', '{teacher_email}')")
 
 
 class ClassData(TableData):
     class_profiles_org = list(config.SUBJECTS.keys())
-    #class_profiles_org = ["mat", "fiz", "inf", "biol", "chem", "pol", "hist", "geo"]
 
     @staticmethod
-    def generate(rows_amount: int, with_existing_teachers: bool = False) -> None:
+    def generate(rows_amount, with_existing_teachers=False):
         if with_existing_teachers:
             max_rows_amount = int(db_manager.run_query(f"select count(*) from teachers", expected_return=True)[0][0])
             rows_amount = min(rows_amount, max_rows_amount)
@@ -101,18 +99,18 @@ class ClassData(TableData):
             ClassData.insert(class_name, teacher_id)
 
     @staticmethod
-    def table_name() -> str:
+    def table_name():
         return "classes"
 
     @staticmethod
-    def insert(class_name: str, teacher_id: int) -> None:
+    def insert(class_name, teacher_id):
         db_manager.run_query(f"insert into classes values " +
                              f"(null, '{class_name}', '{teacher_id}')")
 
 
 class StudentsData(TableData):
     @staticmethod
-    def generate(rows_amount: int, with_existing_parents: bool = False, with_existing_classes: bool = False) -> None:
+    def generate(rows_amount, with_existing_parents = False, with_existing_classes = False):
         if with_existing_parents:
             max_rows_amount = int(db_manager.run_query(
                 f"select count(parents_id) from parents where parents_id not in (select parents_id from students)",
@@ -144,11 +142,11 @@ class StudentsData(TableData):
             StudentsData.insert(student.first_name, student.last_name, student.email, class_id, parents_id)
 
     @staticmethod
-    def table_name() -> str:
+    def table_name():
         return "students"
 
     @staticmethod
-    def insert(first_name: str, last_name: str, student_email: str, class_id: int, parents_id: int) -> None:
+    def insert(first_name, last_name, student_email, class_id, parents_id):
         db_manager.run_query(f"insert into students values " +
                              f"(null, '{first_name}', '{last_name}', '{student_email}', '{class_id}', '{parents_id}')")
 
@@ -157,7 +155,7 @@ class GradesData(TableData):
     lesson_names_org = list(config.SUBJECTS.keys())
 
     @staticmethod
-    def generate(rows_amount: int, with_existing_students: bool = False) -> None:
+    def generate(rows_amount, with_existing_students=False):
         lesson_names = GradesData.lesson_names_org[:]
         for _ in range(rows_amount):
             if with_existing_students:
@@ -173,22 +171,21 @@ class GradesData(TableData):
                 student_id = db_manager.run_query(f"select student_id from students order by student_id desc limit 1", expected_return=True)[0][0]
 
             value = randint(1, 6)
-            weight = randint(1, 3)
             lesson_name = lesson_names[randint(0, len(lesson_names) - 1)]
-            GradesData.insert(student_id, lesson_name, value, weight)
+            GradesData.insert(student_id, lesson_name, value)
 
     @staticmethod
-    def table_name() -> str:
+    def table_name():
         return "grades"
 
     @staticmethod
-    def insert(student_id: id, lesson_name: str, value: int, weight: int) -> None:
+    def insert(student_id, lesson_name, value):
         db_manager.run_query(f"insert into grades values " +
-                             f"(null, '{student_id}', '{lesson_name}', '{value}', '{weight}')")
+                             f"(null, '{student_id}', '{lesson_name}', '{value}', '1')")
 
 
 class Identity:
-    def __init__(self, gender: str = None, last_name: str = None):
+    def __init__(self, gender=None, last_name=None):
         if gender is None and randint(0, 1):
             self.gender = "male"
         elif gender is None:
@@ -219,30 +216,8 @@ class Identity:
 
         self.email = f"{self.first_name}.{self.last_name}{randint(0, 999)}@{chr(randint(ord('a'), ord('z')))}_mail.com".lower()
 
-'''
+
 def gen_all():
-    ParentsData.clear()
-    TeachersData.clear()
-    ClassData.clear()
-    StudentsData.clear()
-    GradesData.clear()
-
-    ParentsData.generate(100)
-    TeachersData.generate(50)
-
-    ClassData.generate(30)
-    ClassData.generate(5, with_existing_teachers=True)
-
-    StudentsData.generate(10)
-    StudentsData.generate(5, with_existing_parents=True)
-    StudentsData.generate(5, with_existing_classes=True)
-    StudentsData.generate(5, with_existing_parents=True, with_existing_classes=True)
-
-    GradesData.generate(30)
-    GradesData.generate(50, with_existing_students=True)
-'''
-
-def gen_all_new():
     ParentsData.clear()
     TeachersData.clear()
     ClassData.clear()
